@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase CRUD</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@4.5.2/dist/pulse/bootstrap.min.css">
+</head>
+<body>
+    <div class="continer p-4">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <form id="task-form">
+                            <div class="form-group">
+                                <input type="text" id="task-title" class="form-control" placeholder="Task Title" autofocus>
+                            </div>
+                            <div class="form-group">
+                                <textarea id="task-description"  rows="3" class="form-control" placeholder="Task Description"></textarea>
+                            </div>
+                            <button class="btn btn-primary" id="btn-btn-form">
+                                Save
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6" id="tasks-continer">
+
+            </div>
+        </div>
+    </div>
+
+
+
+    
+
+
+
+
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getFirestore , collection, addDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"
+        import { doc , setDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"
+        import { getDocs,onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"
+        import { deleteDoc,getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"
+        
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+      
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyDjcH0z_2m7cj_G1Tx4NCOf1jB6CtBq8Ds",
+          authDomain: "notescrudhtml.firebaseapp.com",
+          projectId: "notescrudhtml",
+          storageBucket: "notescrudhtml.appspot.com",
+          messagingSenderId: "988498544691",
+          appId: "1:988498544691:web:ddb17b2c0f87b4d163bb46"
+        };
+      
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);// inicializa Firebase
+        const db = getFirestore();//constante de base de datos
+        const citiesRef = collection(db, "tasks");//para escribir en DB
+        const q = query(collection(db, "tasks"));
+        
+
+/*--------------------------------------JavaScript----------------------------------*/  
+/*-----Funciones  from HTML-----*/
+const taskForm = document.getElementById('task-form');
+const taskContiner = document.getElementById('tasks-continer');
+
+let editStatus = false;
+let id = '';
+/**-----Funciones para Main-----
+* Save a New Task in Firestore
+ * @param {string} title the title of the Task
+ * @param {string} description the description of the Task
+ */
+// Funcion para Gardar una Tarea
+const saveTask = (title, description) => 
+    setDoc(doc(citiesRef), {
+        title: title, 
+        description: description,
+    });
+
+// Funcion para traer todos los documentos de una collecion
+const getTasks =() => getDocs(citiesRef);
+const deleteTask = id => deleteDoc(doc(db,"tasks",id));
+const getTask = id => getDoc(doc(db,"tasks",id))
+const updateTask = (id, updatedTask) => updateDoc(doc(db,"tasks",id),updatedTask);
+
+// Funcion al cargar la Pagina
+window.addEventListener('DOMContentLoaded', (e) => {
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        taskContiner.innerHTML = '';
+        querySnapshot.forEach((doc) => {
+            const task = doc.data();
+            task.id = doc.id;
+
+            //console.log(task)
+            
+            taskContiner.innerHTML +=
+            `<div class="card card-body mt-2 border-primary">
+                <h3 class "h5">${task.title}</>
+                <p>${task.description}</p>
+                <div>
+                    <button class="btn btn-primary btn-delete" data-id="${task.id}">Delete</>
+                    <button class="btn btn-secondary btn-edit" data-id="${task.id}">Edit</>
+                </div>
+            </div>`;
+
+           const btnsDelete =document.querySelectorAll('.btn-delete');
+           btnsDelete.forEach((btn) => {
+                btn.addEventListener('click',async (e) => {
+                    //console.log(e.target.dataset.id)
+                    await deleteTask(e.target.dataset.id)
+                })
+            })
+
+           const btnsEdit =document.querySelectorAll('.btn-edit');
+           btnsEdit.forEach((btn) => {
+                btn.addEventListener('click', async (e) => {
+                    const doc = await getTask(e.target.dataset.id)
+                    //console.log(doc.data());
+                    const task = doc.data();
+                    
+                    taskForm['task-title'].value = task.title;
+                    taskForm['task-description'].value = task.description;
+                    
+                    editStatus = true;
+                    id=doc.id;
+                    taskForm["btn-btn-form"].innerText = "Update";
+               
+                })
+            })
+        })
+    });      
+})
+
+
+                        /*-----Main-----*/
+taskForm.addEventListener('submit', async(e) => {
+    e.preventDefault();
+
+    const title =taskForm['task-title'];
+    const description = taskForm['task-description'];
+   if(!editStatus){
+        await saveTask(title.value, description.value);
+   }else {
+       await updateTask(id,{
+           title:title.value,
+           description: description.value,
+       })
+       editStatus= false;
+       id='';
+       taskForm["btn-btn-form"].innerText = "Save";
+
+   }
+    
+    taskForm.reset();
+    title.focus();
+
+   
+    
+})
+    </script>
+</body>
+</html>
